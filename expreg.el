@@ -5,7 +5,7 @@
 ;; Author: Yuan Fu <casouri@gmail.com>
 ;; Maintainer: Yuan Fu <casouri@gmail.com>
 ;; URL: https://github.com/casouri/expreg
-;; Version: 1.0.0
+;; Version: 1.1.0
 ;; Keywords: text, editing
 ;; Package-Requires: ((emacs "29.1"))
 ;;
@@ -256,7 +256,9 @@ This should be a list of (BEG . END).")
     (let ((region (pop expreg--next-regions)))
       (set-mark (cddr region))
       (goto-char (cadr region))
-      (push region expreg--prev-regions)))
+      (push region expreg--prev-regions)
+      (unless transient-mark-mode
+        (activate-mark))))
 
   (when expreg--verbose
     (message "blame: %s\nnext: %S\nprev: %S"
