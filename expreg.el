@@ -5,7 +5,7 @@
 ;; Author: Yuan Fu <casouri@gmail.com>
 ;; Maintainer: Yuan Fu <casouri@gmail.com>
 ;; URL: https://github.com/casouri/expreg
-;; Version: 1.1.0
+;; Version: 1.2.1
 ;; Keywords: text, editing
 ;; Package-Requires: ((emacs "29.1"))
 ;;
@@ -90,7 +90,7 @@
 
 (defvar-local expreg-functions
     '( expreg--subword expreg--word expreg--list expreg--string
-       expreg--treesit expreg--comment expreg--paragraph)
+       expreg--treesit expreg--comment expreg--paragraph-defun)
   "A list of expansion functions.
 
 Each function is called with no arguments and should return a
@@ -611,35 +611,32 @@ current string/comment and get lists inside."
       (setq beg (point))
       `((sentence . ,(cons beg end))))))
 
-(defun expreg--paragraph ()
+(defun expreg--paragraph-defun ()
   "Return a list of regions containing paragraphs or defuns."
   (condition-case nil
       (let ((orig (point))
             beg end result)
-        (cond
-         ;; Using defun.
-         ((or (derived-mode-p 'prog-mode)
-              beginning-of-defun-function)
 
-          (when (beginning-of-defun)
+        (when beginning-of-defun-function
+          (save-excursion
+            (when (beginning-of-defun)
+              (setq beg (point))
+              (end-of-defun)
+              (setq end (point))
+              ;; If we are at the BOL right below a defun, don’t mark
+              ;; that defun.
+              (unless (eq orig end)
+                (push `(paragraph-defun . ,(cons beg end)) result)))))
+
+        (when (or (derived-mode-p 'text-mode)
+                  (eq major-mode 'fundamental-mode))
+          (save-excursion
+            (backward-paragraph)
+            (skip-syntax-forward "-")
             (setq beg (point))
-            (end-of-defun)
+            (forward-paragraph)
             (setq end (point))
-            ;; If we are at the BOL right below a defun, don’t mark
-            ;; that defun.
-            (unless (eq orig end)
-              (push `(paragraph-defun . ,(cons beg end)) result))))
-
-         ;; Use paragraph.
-         ((or (derived-mode-p 'text-mode)
-              (eq major-mode 'fundamental-mode))
-
-          (backward-paragraph)
-          (skip-syntax-forward "-")
-          (setq beg (point))
-          (forward-paragraph)
-          (setq end (point))
-          (push `(paragraph . ,(cons beg end)) result)))
+            (push `(paragraph . ,(cons beg end)) result)))
 
         result)
     (scan-error nil)))
